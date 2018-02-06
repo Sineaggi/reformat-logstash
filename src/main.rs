@@ -65,13 +65,13 @@ fn take_end<T>(vec: &[T], count: usize) -> &[T] {
 }
 
 fn parse(jserb: json::JsonValue) -> Option<Log> {
-    let timestamp = match jserb["@timestamp"].as_str()?.parse::<DateTime<Utc>>() {
+    let timestamp = match jserb["@timestamp"].as_str().or_else(|| jserb["timestamp"].as_str())?.parse::<DateTime<Utc>>() {
         Ok(timestamp) => timestamp,
         Err(_) => return None,
     };
     // let version = jserb["@version"].as_i32()?; // Unused
-    let message = jserb["message"].as_str()?.to_owned();
-    let logger_name_long = jserb["logger_name"].as_str().or_else(|| jserb["class"].as_str())?;
+    let message = jserb["exception"].as_str().or_else(|| jserb["message"].as_str())?.to_owned();
+    let logger_name_long = jserb["logger_name"].as_str().or_else(|| jserb["class"].as_str()).or_else(|| jserb["logger"].as_str())?;
     let logger_name = abbreviate_logger_name(logger_name_long, 40);
     let logger_level = match jserb["level"].as_str()? {
         "TRACE" => Level::TRACE,
@@ -82,7 +82,7 @@ fn parse(jserb: json::JsonValue) -> Option<Log> {
         "FATAL" => Level::FATAL,
         _ => return None,
     };
-    let thread_name_long = jserb["thread_name"].as_str()?;
+    let thread_name_long = jserb["thread_name"].as_str().or_else(|| jserb["thread"].as_str())?;
     let thread_name: String = abbreviate_thread_name(thread_name_long, 15);
     Some(Log {
         timestamp,
